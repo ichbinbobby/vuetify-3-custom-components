@@ -5,6 +5,9 @@
     density="compact"
     hide-details="auto"
     :label="label"
+    :rules="[rules.germanDateFormat]"
+    :width="width"
+    :variant="variant"
     @blur="onBlur"
     @keydown.enter="onEnter"
     @click:clear="clearDate"
@@ -12,7 +15,7 @@
     <template #prepend>
       <v-menu
         v-model="dateMenu"
-        :close-on-content-click="true"
+        :close-on-content-click="false"
       >
         <template #activator="{ props: menu }">
           <v-icon
@@ -23,6 +26,9 @@
 
         <v-date-picker
           v-model="dateModel"
+          :allowed-dates="allowedDates"
+          :max="max"
+          :min="min"
           @update:model-value="onDatePickerUpdate"
         />
       </v-menu>
@@ -31,17 +37,43 @@
 </template>
 
 <script setup>
-import { ref, watch, defineEmits, defineProps } from 'vue';
+import { ref, watch } from 'vue';
 
 // Define props
 defineProps({
+  allowedDates: {
+    type: Array,
+    default: undefined,
+  },
+
   density: {
     type: String,
     default: 'compact',
   },
+
   label: {
     type: String,
     default: '',
+  },
+
+  max: {
+    type: String,
+    default: undefined,
+  },
+
+  min: {
+    type: String,
+    default: undefined,
+  },
+
+  width: {
+    type: [String, Number],
+    default: undefined,
+  },
+
+  variant: {
+    type: String,
+    default: 'filled',
   },
 });
 
@@ -52,6 +84,14 @@ const emit = defineEmits(['update:dateModel', 'update:dateText']);
 const dateText = ref('');
 const dateMenu = ref(false);
 const dateModel = ref(null);
+
+const rules = {
+  germanDateFormat: value => {
+    if (!value) return true; // Allow empty values (handled by `required` rule)
+    const regex = /^\d{1,2}[./]\d{1,2}[./]\d{4}$/; // Matches dd.mm.yyyy or dd/mm/yyyy
+    return regex.test(value) || 'Invalid date format (use dd.mm.yyyy)';
+  },
+};
 
 // Watch for changes to dateModel and update dateText accordingly
 watch(dateModel, (newDate) => {
@@ -90,7 +130,7 @@ function parseDateText() {
   }
 
   // Parse the German date format (dd.mm.yyyy)
-  const [day, month, year] = dateText.value.split('.');
+  const [day, month, year] = dateText.value.split(/[./]/); // Split by . or /
   if (day && month && year) {
     const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
     if (!isNaN(parsedDate.getTime())) {
@@ -116,3 +156,7 @@ function onDatePickerUpdate(value) {
   dateModel.value = value; // Update the dateModel
 }
 </script>
+
+<style scoped>
+
+</style>

@@ -5,7 +5,7 @@
     density="compact"
     hide-details="auto"
     :label="label"
-    :rules="[rules.germanDateFormat]"
+    :rules="[rules.germanDateFormat, rules.dateInRange]"
     :width="width"
     :variant="variant"
     @blur="onBlur"
@@ -39,7 +39,7 @@
 import { ref, watch } from 'vue';
 
 // Define props
-defineProps({
+const props = defineProps({
   allowedDates: {
     type: Array,
     default: undefined,
@@ -76,6 +76,9 @@ defineProps({
   },
 });
 
+// Destructure min and max props
+const { min, max } = props;
+
 // Define emits for v-model bindings
 const emit = defineEmits(['update:dateModel', 'update:dateText']);
 
@@ -89,6 +92,18 @@ const rules = {
     if (!value) return true; // Allow empty values (handled by `required` rule)
     const regex = /^\d{1,2}[./]\d{1,2}[./]\d{4}$/; // Matches dd.mm.yyyy or dd/mm/yyyy
     return regex.test(value) || 'Invalid date format (use dd.mm.yyyy)';
+  },
+
+  dateInRange: value => {
+    if (!value) return true; // Allow empty values
+    const [day, month, year] = value.split(/[./]/); // Split by . or /
+    if (day && month && year) {
+      const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+      if (!isNaN(parsedDate.getTime()) && isDateInRange(parsedDate)) {
+        return true; // Date is valid and in range
+      }
+    }
+    return `Date must be in allowed range`;
   },
 };
 
@@ -110,6 +125,21 @@ watch(dateModel, (newDate) => {
   }
 });
 
+// Helper function to validate date range
+function isDateInRange(date) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return false;
+  }
+
+  const minDate = min ? new Date(min) : null;
+  const maxDate = max ? new Date(max) : null;
+
+  if (minDate && date < minDate) return false;
+  if (maxDate && date > maxDate) return false;
+
+  return true;
+}
+
 // Parse the dateText into dateModel when the input loses focus
 function onBlur() {
   parseDateText();
@@ -120,7 +150,7 @@ function onEnter() {
   parseDateText();
 }
 
-// Common function to parse dateText into dateModel
+// Parse the dateText into dateModel when the input loses focus
 function parseDateText() {
   if (!dateText.value) {
     dateModel.value = null; // Clear the date if the text is empty
@@ -130,11 +160,15 @@ function parseDateText() {
 
   // Parse the German date format (dd.mm.yyyy)
   const [day, month, year] = dateText.value.split(/[./]/); // Split by . or /
+
   if (day && month && year) {
     const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-    if (!isNaN(parsedDate.getTime())) {
-      dateModel.value = parsedDate; // Update the model if the date is valid
+
+    if (!isNaN(parsedDate.getTime()) && isDateInRange(parsedDate)) {
+      dateModel.value = parsedDate; // Update the model if the date is valid and in range
       emit('update:dateModel', parsedDate); // Emit the updated dateModel to the parent
+    } else {
+      dateModel.value = null; // Set to null if the date is out of range
     }
   }
 

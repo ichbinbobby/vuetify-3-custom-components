@@ -29,7 +29,6 @@
           :allowed-dates="allowedDates"
           :max="max"
           :min="min"
-          @update:model-value="onDatePickerUpdate"
         />
       </v-menu>
     </template>
@@ -150,13 +149,4 @@ function clearDate() {
   emit('update:dateText', '');
   emit('update:dateModel', null);
 }
-
-// Handle updates from the date picker
-function onDatePickerUpdate(value) {
-  dateModel.value = value; // Update the dateModel
-}
 </script>
-
-<style scoped>
-
-</style>
